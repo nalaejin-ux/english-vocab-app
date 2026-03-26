@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useWordProgress } from "@/hooks/useWordProgress";
@@ -14,18 +15,25 @@ export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
   const { stats, loading } = useWordProgress(user?.id ?? null);
 
-  if (authLoading || loading) {
-    return <main className="app-container flex items-center justify-center min-h-dvh"><span className="text-4xl animate-bounce">📚</span></main>;
-  }
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) { router.push("/onboarding"); return; }
+    // 학부모면 학부모 대시보드로
+    if (user.role === "parent") { router.push("/parent"); return; }
+  }, [user, authLoading]);
 
-  if (!user) { router.push("/onboarding"); return null; }
+  if (authLoading || loading) return (
+    <main className="app-container flex items-center justify-center min-h-dvh">
+      <span className="text-4xl animate-bounce">📚</span>
+    </main>
+  );
+
+  if (!user || user.role === "parent") return null;
 
   const masteredPct = pct(stats.mastered, stats.total);
-  const dueCount = stats.dueCount;
 
   return (
     <main className="app-container pt-6">
-      {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="text-gray-400 text-sm">좋은 하루예요!</p>
@@ -37,7 +45,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 전체 진행도 */}
       <div className="bg-white rounded-3xl p-5 shadow-card mb-4">
         <div className="flex justify-between items-center mb-3">
           <span className="font-semibold text-gray-700">전체 진행도</span>
@@ -47,22 +54,20 @@ export default function HomePage() {
         <p className="text-xs text-gray-400 mt-2">{stats.mastered} / {stats.total} 단어 완료</p>
       </div>
 
-      {/* 통계 그리드 */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <StatCard emoji="⭐" label="완전히 외운 단어" value={stats.mastered} color="green" />
         <StatCard emoji="📖" label="학습 중" value={stats.learning} color="blue" />
-        <StatCard emoji="🔁" label="복습 필요" value={dueCount} color="yellow" sub={dueCount > 0 ? "오늘 복습하세요!" : "없음"} />
+        <StatCard emoji="🔁" label="복습 필요" value={stats.dueCount} color="yellow" sub={stats.dueCount > 0 ? "오늘 복습하세요!" : "없음"} />
         <StatCard emoji="🆕" label="새 단어 남음" value={stats.newRemaining} color="purple" />
       </div>
 
-      {/* 오늘의 학습 버튼 */}
       <div className="flex flex-col gap-3 mb-4">
         <Button size="xl" fullWidth onClick={() => router.push("/study")}>
           📖 오늘의 학습 시작
         </Button>
-        {dueCount > 0 && (
+        {stats.dueCount > 0 && (
           <Button size="lg" variant="secondary" fullWidth onClick={() => router.push("/study?mode=review")}>
-            🔁 복습하기 ({dueCount}개)
+            🔁 복습하기 ({stats.dueCount}개)
           </Button>
         )}
         <Button size="lg" variant="secondary" fullWidth onClick={() => router.push("/quiz")}>
