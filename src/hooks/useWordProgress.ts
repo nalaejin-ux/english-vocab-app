@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ALL_WORDS } from "@/data/words";
 import { calculateNextReview, isDueForReview } from "@/lib/spaced-repetition";
+import { shuffle } from "@/lib/utils";
 import type { UserWordProgress, VocabWord, AnswerChoice } from "@/types";
 
 const DAILY_NEW_WORDS = 5;
@@ -28,10 +29,9 @@ export function useWordProgress(userId: string | null) {
 
   const getTodayNewWords = useCallback((): VocabWord[] => {
     const learnedWords = new Set(progress.map((p) => p.vocab_id));
-    return (ALL_WORDS as VocabWord[])
-      .filter((w) => !learnedWords.has(w.word))
-      .sort((a, b) => a.order_index - b.order_index)
-      .slice(0, DAILY_NEW_WORDS);
+    const unlearned = (ALL_WORDS as VocabWord[]).filter((w) => !learnedWords.has(w.word));
+    // 랜덤 섞은 후 5개 선택
+    return shuffle(unlearned).slice(0, DAILY_NEW_WORDS);
   }, [progress]);
 
   const getDueWords = useCallback((): VocabWord[] => {
@@ -39,7 +39,9 @@ export function useWordProgress(userId: string | null) {
       (p) => p.status !== "mastered" && isDueForReview(p.next_review_at)
     );
     const dueWordIds = new Set(dueProgress.map((p) => p.vocab_id));
-    return (ALL_WORDS as VocabWord[]).filter((w) => dueWordIds.has(w.word));
+    const due = (ALL_WORDS as VocabWord[]).filter((w) => dueWordIds.has(w.word));
+    // 복습도 랜덤 순서로
+    return shuffle(due);
   }, [progress]);
 
   const updateWordProgress = useCallback(async (word: string, answer: AnswerChoice) => {
