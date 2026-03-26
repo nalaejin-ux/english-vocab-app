@@ -18,8 +18,9 @@ export function QuizCard({ word, allWords, cardNumber, totalCards, onAnswer }: Q
   const [answered, setAnswered] = useState(false);
 
   useEffect(() => {
-    const wrongs = allWords.filter((w) => w.id !== word.id).map((w) => w.meaning);
-    const shuffledWrongs = shuffle(wrongs).slice(0, 3);
+    // 정답 + 오답 1개 = 2지선다
+    const wrongs = allWords.filter((w) => w.word !== word.word).map((w) => w.meaning);
+    const shuffledWrongs = shuffle(wrongs).slice(0, 1);
     setChoices(shuffle([word.meaning, ...shuffledWrongs]));
     setSelected(null);
     setAnswered(false);
@@ -40,6 +41,7 @@ export function QuizCard({ word, allWords, cardNumber, totalCards, onAnswer }: Q
         <span className="text-xs">뜻을 선택하세요</span>
       </div>
 
+      {/* 문제 카드 */}
       <div className="w-full min-h-[140px] rounded-3xl bg-gradient-to-br from-primary-500 to-primary-600 flex flex-col items-center justify-center gap-2 px-6 py-8 shadow-lg">
         <p className="text-primary-100 text-sm font-medium">이 단어의 뜻은?</p>
         <p className="text-4xl font-bold text-white tracking-wide">{word.word}</p>
@@ -48,7 +50,8 @@ export function QuizCard({ word, allWords, cardNumber, totalCards, onAnswer }: Q
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* 2지선다 */}
+      <div className="flex flex-col gap-3">
         {choices.map((choice) => {
           const isCorrect = choice === word.meaning;
           const isSelected = choice === selected;
@@ -57,7 +60,7 @@ export function QuizCard({ word, allWords, cardNumber, totalCards, onAnswer }: Q
               key={choice}
               onClick={() => handleSelect(choice)}
               className={cn(
-                "py-4 px-3 rounded-2xl border-2 font-semibold text-sm text-center transition-all duration-200 leading-tight",
+                "w-full py-5 px-4 rounded-2xl border-2 font-semibold text-base text-center transition-all duration-200 leading-tight",
                 !answered
                   ? "bg-white border-gray-200 text-gray-700 active:scale-95 hover:border-primary-300 hover:bg-primary-50"
                   : isCorrect

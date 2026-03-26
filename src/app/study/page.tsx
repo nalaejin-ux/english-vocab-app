@@ -8,7 +8,6 @@ import { FlashCard } from "@/components/cards/FlashCard";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Button } from "@/components/ui/Button";
-import { ALL_WORDS } from "@/data/words";
 import type { VocabWord, AnswerChoice } from "@/types";
 import { pct } from "@/lib/utils";
 
@@ -27,24 +26,19 @@ function StudyContent() {
 
   useEffect(() => {
     if (!user) return;
-    if (isReview) {
-      const due = getDueWords();
-      setWords(due.map((p) => p.vocab as VocabWord).filter(Boolean));
-    } else {
-      const newWords = getTodayNewWords();
-      // 새 단어가 없으면 복습 단어 제공
-      setWords(newWords.length > 0 ? newWords : getDueWords().map((p) => p.vocab as VocabWord).filter(Boolean));
-    }
+    const w = isReview ? getDueWords() : getTodayNewWords();
+    setWords(w.length > 0 ? w : getDueWords());
   }, [user, isReview]);
 
   const handleAnswer = async (answer: AnswerChoice) => {
     const word = words[index];
-    await updateWordProgress(word.id ?? word.word, answer);
-    setResults((prev) => [...prev, { word, answer }]);
+    await updateWordProgress(word.word, answer);
+    const newResults = [...results, { word, answer }];
+    setResults(newResults);
 
     if (index + 1 >= words.length) {
       const duration = Math.floor((Date.now() - startTime.current) / 1000);
-      const correct = results.filter((r) => r.answer === "know").length + (answer === "know" ? 1 : 0);
+      const correct = newResults.filter((r) => r.answer === "know").length;
       await saveSession({
         sessionType: isReview ? "review" : "new_words",
         wordsStudied: words.length,
@@ -91,7 +85,6 @@ function StudyContent() {
     );
   }
 
-  const currentWord = words[index];
   return (
     <main className="app-container pt-6">
       <div className="flex items-center justify-between mb-4">
@@ -100,12 +93,16 @@ function StudyContent() {
         <span className="text-sm text-gray-400">{index+1}/{words.length}</span>
       </div>
       <ProgressBar value={pct(index, words.length)} color="green" className="mb-6" />
-      <FlashCard word={currentWord} onAnswer={handleAnswer} cardNumber={index+1} totalCards={words.length} />
+      <FlashCard word={words[index]} onAnswer={handleAnswer} cardNumber={index+1} totalCards={words.length} />
       <BottomNav />
     </main>
   );
 }
 
 export default function StudyPage() {
-  return <Suspense fallback={<div className="app-container flex items-center justify-center min-h-dvh"><span className="text-4xl animate-bounce">📖</span></div>}><StudyContent /></Suspense>;
+  return (
+    <Suspense fallback={<div className="app-container flex items-center justify-center min-h-dvh"><span className="text-4xl animate-bounce">📖</span></div>}>
+      <StudyContent />
+    </Suspense>
+  );
 }
