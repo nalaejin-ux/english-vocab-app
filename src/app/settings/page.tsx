@@ -28,13 +28,14 @@ export default function SettingsPage() {
     setLinkMsg("");
     setLinkError("");
 
-    const { data: childUser, error } = await supabase
+    // 자녀 이메일로 users 테이블에서 찾기
+    const { data: childUser } = await supabase
       .from("users")
       .select("id, name, role")
-      .eq("email", childEmail.trim().toLowerCase())
-      .maybeSingle();
+      .eq("email", childEmail.trim())
+      .single();
 
-    if (error || !childUser) {
+    if (!childUser) {
       setLinkError("해당 이메일로 가입된 계정을 찾을 수 없어요.");
       setLinking(false);
       return;
@@ -46,16 +47,18 @@ export default function SettingsPage() {
       return;
     }
 
-    const { error: updateError } = await supabase
+    // 학부모 계정에 child_id 저장
+    const { error } = await supabase
       .from("users")
       .update({ child_id: childUser.id })
       .eq("id", user!.id);
 
-    if (updateError) {
+    if (error) {
       setLinkError("연결에 실패했어요. 다시 시도해주세요.");
     } else {
       setLinkMsg(`${childUser.name} 계정과 연결됐어요! 🎉`);
       setChildEmail("");
+      // 페이지 새로고침으로 반영
       setTimeout(() => router.push("/parent"), 1500);
     }
     setLinking(false);
@@ -109,12 +112,8 @@ export default function SettingsPage() {
                 onChange={(e) => setChildEmail(e.target.value)}
                 className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-base focus:outline-none focus:border-primary-400 mb-3"
               />
-              {linkError && (
-                <p className="text-red-500 text-sm mb-3 bg-red-50 rounded-xl px-3 py-2">{linkError}</p>
-              )}
-              {linkMsg && (
-                <p className="text-primary-600 text-sm mb-3 bg-primary-50 rounded-xl px-3 py-2">{linkMsg}</p>
-              )}
+              {linkError && <p className="text-red-500 text-sm mb-3 bg-red-50 rounded-xl px-3 py-2">{linkError}</p>}
+              {linkMsg && <p className="text-primary-600 text-sm mb-3 bg-primary-50 rounded-xl px-3 py-2">{linkMsg}</p>}
               <Button size="lg" fullWidth onClick={handleLinkChild} disabled={linking}>
                 {linking ? "연결 중..." : "자녀 계정 연결하기 🔗"}
               </Button>
@@ -143,4 +142,3 @@ export default function SettingsPage() {
     </main>
   );
 }
-

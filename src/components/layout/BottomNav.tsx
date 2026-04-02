@@ -15,6 +15,7 @@ const CHILD_NAV = [
 
 const PARENT_NAV = [
   { href: "/parent",    emoji: "📊", label: "현황" },
+  { href: "/words",     emoji: "📝", label: "단어" },
   { href: "/settings",  emoji: "⚙️", label: "설정" },
 ];
 

@@ -21,7 +21,12 @@ export function useAuth() {
             .eq("id", authUser.id)
             .single();
 
-          setUser(profile ? (profile as AppUser) : null);
+          if (profile) {
+            setUser(profile as AppUser);
+          } else {
+            // users 테이블에 프로필이 없으면 null로 처리 후 온보딩으로
+            setUser(null);
+          }
         } else {
           setUser(null);
         }
