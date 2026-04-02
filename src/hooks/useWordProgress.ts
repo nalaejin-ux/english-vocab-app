@@ -11,16 +11,39 @@ const DAILY_NEW_WORDS = 5;
 
 export function useWordProgress(userId: string | null) {
   const [progress, setProgress] = useState<UserWordProgress[]>([]);
+  const [allWords, setAllWords] = useState<VocabWord[]>(ALL_WORDS as VocabWord[]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
   const loadProgress = useCallback(async () => {
     if (!userId) { setLoading(false); return; }
     setLoading(true);
+
+    // 기본 단어 + custom_words 합치기
+    const { data: customWords } = await supabase
+      .from("custom_words")
+      .select("*");
+
+    const custom: VocabWord[] = (customWords ?? []).map((w: any) => ({
+      id: w.id,
+      word: w.word,
+      meaning: w.meaning,
+      type: w.type,
+      category: "elementary" as const,
+      difficulty: 1 as const,
+      order_index: 9999,
+      example_sentence: w.example_sentence,
+      past: undefined,
+      past_participle: undefined,
+    }));
+
+    setAllWords([...(ALL_WORDS as VocabWord[]), ...custom]);
+
     const { data } = await supabase
       .from("user_word_progress")
       .select("*")
       .eq("user_id", userId);
+
     setProgress((data as UserWordProgress[]) ?? []);
     setLoading(false);
   }, [userId]);
@@ -29,20 +52,17 @@ export function useWordProgress(userId: string | null) {
 
   const getTodayNewWords = useCallback((): VocabWord[] => {
     const learnedWords = new Set(progress.map((p) => p.vocab_id));
-    const unlearned = (ALL_WORDS as VocabWord[]).filter((w) => !learnedWords.has(w.word));
-    // 랜덤 섞은 후 5개 선택
+    const unlearned = allWords.filter((w) => !learnedWords.has(w.word));
     return shuffle(unlearned).slice(0, DAILY_NEW_WORDS);
-  }, [progress]);
+  }, [progress, allWords]);
 
   const getDueWords = useCallback((): VocabWord[] => {
     const dueProgress = progress.filter(
       (p) => p.status !== "mastered" && isDueForReview(p.next_review_at)
     );
     const dueWordIds = new Set(dueProgress.map((p) => p.vocab_id));
-    const due = (ALL_WORDS as VocabWord[]).filter((w) => dueWordIds.has(w.word));
-    // 복습도 랜덤 순서로
-    return shuffle(due);
-  }, [progress]);
+    return shuffle(allWords.filter((w) => dueWordIds.has(w.word)));
+  }, [progress, allWords]);
 
   const updateWordProgress = useCallback(async (word: string, answer: AnswerChoice) => {
     if (!userId) return;
@@ -98,13 +118,14 @@ export function useWordProgress(userId: string | null) {
   }, [userId]);
 
   const stats = {
-    total: ALL_WORDS.length,
+    total: allWords.length,
     mastered: progress.filter((p) => p.status === "mastered").length,
     learning: progress.filter((p) => p.status === "learning" || p.status === "review_due").length,
     weak: progress.filter((p) => p.status === "weak").length,
-    newRemaining: ALL_WORDS.length - progress.length,
+    newRemaining: allWords.length - progress.length,
     dueCount: getDueWords().length,
+    customCount: allWords.length - ALL_WORDS.length,
   };
 
-  return { progress, loading, stats, getTodayNewWords, getDueWords, updateWordProgress, saveSession, reload: loadProgress };
+  return { progress, loading, stats, allWords, getTodayNewWords, getDueWords, updateWordProgress, saveSession, reload: loadProgress };
 }

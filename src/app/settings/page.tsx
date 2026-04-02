@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useWordProgress } from "@/hooks/useWordProgress";
 import { createClient } from "@/lib/supabase/client";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Button } from "@/components/ui/Button";
+import { ALL_WORDS } from "@/data/words";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { stats } = useWordProgress(user?.id ?? null);
   const supabase = createClient();
 
   const [childEmail, setChildEmail] = useState("");
@@ -28,14 +31,13 @@ export default function SettingsPage() {
     setLinkMsg("");
     setLinkError("");
 
-    // 자녀 이메일로 users 테이블에서 찾기
-    const { data: childUser } = await supabase
+    const { data: childUser, error } = await supabase
       .from("users")
       .select("id, name, role")
-      .eq("email", childEmail.trim())
-      .single();
+      .eq("email", childEmail.trim().toLowerCase())
+      .maybeSingle();
 
-    if (!childUser) {
+    if (error || !childUser) {
       setLinkError("해당 이메일로 가입된 계정을 찾을 수 없어요.");
       setLinking(false);
       return;
@@ -47,18 +49,16 @@ export default function SettingsPage() {
       return;
     }
 
-    // 학부모 계정에 child_id 저장
-    const { error } = await supabase
+    const { error: updateError } = await supabase
       .from("users")
       .update({ child_id: childUser.id })
       .eq("id", user!.id);
 
-    if (error) {
+    if (updateError) {
       setLinkError("연결에 실패했어요. 다시 시도해주세요.");
     } else {
       setLinkMsg(`${childUser.name} 계정과 연결됐어요! 🎉`);
       setChildEmail("");
-      // 페이지 새로고침으로 반영
       setTimeout(() => router.push("/parent"), 1500);
     }
     setLinking(false);
@@ -128,9 +128,18 @@ export default function SettingsPage() {
           <p className="text-xs text-gray-400 mb-1">앱 정보</p>
           <p className="text-gray-700 font-medium">버전 0.1.0 MVP</p>
         </div>
-        <div className="px-5 py-4">
-          <p className="text-xs text-gray-400 mb-1">단어 데이터</p>
+        <div className="px-5 py-4 border-b border-gray-50">
+          <p className="text-xs text-gray-400 mb-1">기본 단어 데이터</p>
           <p className="text-gray-700 font-medium">불규칙 동사 100개 + 초등 교과서 100개</p>
+        </div>
+        <div className="px-5 py-4">
+          <p className="text-xs text-gray-400 mb-1">전체 단어 수 (추가 단어 포함)</p>
+          <p className="text-gray-700 font-medium">
+            총 <span className="text-primary-600 font-bold text-lg">{stats.total}</span>개
+            {stats.customCount > 0 && (
+              <span className="text-xs text-gray-400 ml-2">(추가 단어 {stats.customCount}개 포함)</span>
+            )}
+          </p>
         </div>
       </div>
 
