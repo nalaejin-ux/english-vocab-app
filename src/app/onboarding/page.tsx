@@ -39,14 +39,14 @@ export default function OnboardingPage() {
         <h1 className="text-3xl font-bold text-gray-800 text-center leading-tight">나은이의<br />영어 단어장</h1>
         <p className="text-gray-500 text-center text-base leading-relaxed">매일 5개씩, 뇌가 기억하는 방법으로<br />영어 단어를 외워봐요!</p>
       </div>
-      <div className="flex flex-col gap-3 w-full">
-        <Button size="xl" fullWidth onClick={() => setStep("role")}>시작하기 🚀</Button>
-        <Button size="lg" variant="secondary" fullWidth onClick={async () => {
-          const em = prompt("이메일") ?? ""; const pw = prompt("비밀번호") ?? "";
-          const { error } = await supabase.auth.signInWithPassword({ email: em, password: pw });
-          if (!error) router.push("/home"); else alert("로그인 실패: " + error.message);
-        }}>이미 계정이 있어요</Button>
-      </div>
+<div className="flex flex-col gap-3 w-full">
+  <Button size="xl" fullWidth className="bg-primary-500 hover:bg-primary-600" onClick={async () => {
+    const em = prompt("이메일") ?? ""; const pw = prompt("비밀번호") ?? "";
+    const { error } = await supabase.auth.signInWithPassword({ email: em, password: pw });
+    if (!error) router.push("/home"); else alert("로그인 실패: " + error.message);
+  }}>단어공부 시작 📚</Button>
+  <Button size="lg" variant="ghost" fullWidth onClick={() => setStep("role")}>새로운 계정 만들기</Button>
+</div>
     </main>
   );
 
